@@ -1,0 +1,18 @@
+# Test profile: in-memory H2 in PostgreSQL compatibility mode, so the real Flyway
+# migrations (not a Hibernate-generated shortcut schema) are executed in every CI run.
+spring:
+  datasource:
+    url: jdbc:h2:mem:haraka-pay-tests;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+haraka:
+  jwt:
+    secret: ci-only-secret-0123456789abcdef-never-prod
+    ttl-minutes: 60
+
+logging:
+  level:
+    root: warn
+    org.hibernate.SQL: warn

@@ -1,0 +1,15 @@
+# Local development profile: real PostgreSQL (docker compose up -d postgres)
+spring:
+  datasource:
+    url: jdbc:postgresql://${HARAKA_PG_HOST:localhost}:${HARAKA_PG_PORT:5432}/${HARAKA_PG_DB:haraka}
+    username: ${HARAKA_PG_USER:haraka}
+    password: ${HARAKA_PG_PASSWORD:haraka}
+    hikari:
+      maximum-pool-size: 10
+      pool-name: haraka-pg
+
+logging:
+  level:
+    io.github.frankie7techy.haraka: info
+    org.hibernate.SQL: debug
+    org.springframework.security: info

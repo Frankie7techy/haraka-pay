@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: haraka-pay
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none   # the database schema is owned by Flyway; Hibernate never alters it
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+haraka:
+  jwt:
+    # Dev/test default only. In production set HARAKA_JWT_SECRET to a >= 32-char random value.
+    secret: ${HARAKA_JWT_SECRET:dev-only-secret-0123456789abcdef-rotate-in-prod}
+    ttl-minutes: ${HARAKA_JWT_TTL_MINUTES:120}
+  transfer:
+    max-amount-minor: 50000000    # KES 500,000.00 per transfer
+    min-amount-minor: 1
+  topup:
+    max-amount-minor: 20000000    # KES 200,000.00 per deposit (simulated M-Pesa ceiling)
+  idempotency:
+    retention-days: ${HARAKA_IDEMPOTENCY_RETENTION_DAYS:7}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+logging:
+  level:
+    root: info
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [%X{correlationId:-none}] %logger{36} - %msg%n"
