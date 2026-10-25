@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: haraka
+      POSTGRES_USER: haraka
+      POSTGRES_PASSWORD: haraka
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U haraka -d haraka"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - haraka-pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      HARAKA_PG_HOST: postgres
+      HARAKA_PG_PORT: 5432
+      HARAKA_PG_DB: haraka
+      HARAKA_PG_USER: haraka
+      HARAKA_PG_PASSWORD: haraka
+      # override with a real secret in any shared environment
+      HARAKA_JWT_SECRET: local-dev-secret-0123456789abcdef-rotate-me
+    ports:
+      - "8080:8080"
+
+volumes:
+  haraka-pgdata:

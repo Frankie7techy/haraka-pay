@@ -1,0 +1,120 @@
+### HarakaPay API walkthrough
+### Requires a running instance: docker compose up --build  (or ./mvnw spring-boot:run)
+### @host = http://localhost:8080
+
+### 1. Register (creates the wallet too) — save the accessToken from the response
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "frankie@example.com",
+  "fullName": "Frankie Ngaruiya",
+  "password": "Sup3rSecret!x"
+}
+
+### 2. Login
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "frankie@example.com",
+  "password": "Sup3rSecret!x"
+}
+
+### 3. Check the wallet (balance should be 0.00)
+GET {{host}}/api/v1/accounts/me
+Authorization: Bearer {{token}}
+
+### 4. Simulate an M-Pesa-style deposit of KES 5,000.00 (500000 minor)
+POST {{host}}/api/v1/accounts/me/topups
+Authorization: Bearer {{token}}
+Idempotency-Key: deposit-0000000123456789
+Content-Type: application/json
+
+{
+  "amountMinor": 500000,
+  "narrative": "salary"
+}
+
+### 4b. Same key again -> exact same stored response, no second deposit
+POST {{host}}/api/v1/accounts/me/topups
+Authorization: Bearer {{token}}
+Idempotency-Key: deposit-0000000123456789
+Content-Type: application/json
+
+{
+  "amountMinor": 500000,
+  "narrative": "salary"
+}
+
+### 4c. Same key, different payload -> 409 IDEMPOTENCY_CONFLICT
+POST {{host}}/api/v1/accounts/me/topups
+Authorization: Bearer {{token}}
+Idempotency-Key: deposit-0000000123456789
+Content-Type: application/json
+
+{
+  "amountMinor": 999,
+  "narrative": "sneaky"
+}
+
+### 5. Register a second user to transfer to (use their accountNumber)
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "wanjiku@example.com",
+  "fullName": "Wanjiku N",
+  "password": "Sup3rSecret!x"
+}
+
+### 6. Transfer KES 2,000.00 to them
+POST {{host}}/api/v1/transfers
+Authorization: Bearer {{token}}
+Idempotency-Key: transfer-0000000123456789
+Content-Type: application/json
+
+{
+  "targetAccountNumber": "HAR-000002",
+  "amountMinor": 200000,
+  "narrative": "lunch"
+}
+
+### 7. Inspect the two ledger legs (DEBIT + CREDIT)
+GET {{host}}/api/v1/transfers/1/entries
+Authorization: Bearer {{token}}
+
+### 8. Paged statement, newest first
+GET {{host}}/api/v1/accounts/me/statement?page=0&size=10
+Authorization: Bearer {{token}}
+
+### 9. Over the ceiling -> 422 INVALID_AMOUNT
+POST {{host}}/api/v1/transfers
+Authorization: Bearer {{token}}
+Idempotency-Key: transfer-0000000123456790
+Content-Type: application/json
+
+{
+  "targetAccountNumber": "HAR-000002",
+  "amountMinor": 50000001
+}
+
+### 10. More than the balance -> 422 INSUFFICIENT_FUNDS (still audited as a FAILED transfer)
+POST {{host}}/api/v1/transfers
+Authorization: Bearer {{token}}
+Idempotency-Key: transfer-0000000123456791
+Content-Type: application/json
+
+{
+  "targetAccountNumber": "HAR-000002",
+  "amountMinor": 49900000
+}
+
+### 11. Missing token -> 401 problem document
+GET {{host}}/api/v1/accounts/me
+
+### 12. Reconciliation health check (ledgerIntegrity component)
+GET {{host}}/actuator/health
+
+### 13. Prometheus metrics
+GET {{host}}/actuator/prometheus
