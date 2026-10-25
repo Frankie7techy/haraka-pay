@@ -1,6 +1,7 @@
 package io.github.frankie7techy.haraka.common;
 
 import io.github.frankie7techy.haraka.common.exception.ApiException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +25,8 @@ import org.springframework.stereotype.Component;
 public class OptimisticRetryExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(OptimisticRetryExecutor.class);
-    private static final int MAX_ATTEMPTS = 8;
-    private static final long BASE_BACKOFF_MILLIS = 25L;
+    private static final int MAX_ATTEMPTS = 15;
+    private static final long BASE_BACKOFF_MILLIS = 20L;
 
     public <T> T execute(String operationName, Supplier<T> operation) {
         OptimisticLockingFailureException lastFailure = null;
@@ -45,10 +46,12 @@ public class OptimisticRetryExecutor {
                 operationName + " could not complete under heavy contention; please retry");
     }
 
+    /** Exponential backoff with jitter so competing retries do not move in lockstep. */
     private void sleepWithBackoff(int attempt) {
         try {
-            long backoff = BASE_BACKOFF_MILLIS * (1L << Math.min(attempt, 5));
-            Thread.sleep(backoff);
+            long base = BASE_BACKOFF_MILLIS * (1L << Math.min(attempt, 5));
+            long jitter = ThreadLocalRandom.current().nextLong(base / 2 + 1);
+            Thread.sleep(base + jitter);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while backing off optimistic-lock retry", interrupted);

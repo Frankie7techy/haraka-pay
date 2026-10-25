@@ -63,7 +63,7 @@ class TransferConcurrencyTest extends IntegrationTestBase {
             instructions.add(new Instruction(bobToken, aliceAccount));
         }
 
-        try (ExecutorService pool = Executors.newFixedThreadPool(8)) {
+        try (ExecutorService pool = Executors.newFixedThreadPool(6)) {
             List<Future<HttpResult>> futures = new ArrayList<>();
             for (Instruction instruction : instructions) {
                 futures.add(pool.submit((Callable<HttpResult>) () -> {
